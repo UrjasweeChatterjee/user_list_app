@@ -53,12 +53,45 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Center(
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundImage: NetworkImage(user.avatar),
-                    onBackgroundImageError: (exception, stackTrace) {
-                      debugPrint('Error loading avatar: $exception');
-                    },
+                  child: Container(
+                    width: 150,
+                    height: 150,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.grey.shade200,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Image.network(
+                        user.avatar,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          debugPrint('Error loading avatar: $error');
+                          return const Icon(
+                            Icons.person,
+                            size: 80,
+                            color: Colors.grey,
+                          );
+                        },
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -71,21 +104,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                   'Email: ${user.email}',
                   style: const TextStyle(fontSize: 18),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  'Phone: ${user.phone ?? 'N/A'}',
-                  style: const TextStyle(fontSize: 18),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Gender: ${user.gender ?? 'N/A'}',
-                  style: const TextStyle(fontSize: 18),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'ID: ${user.id}',
-                  style: const TextStyle(fontSize: 18),
-                ),
+
               ],
             ),
           );

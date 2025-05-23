@@ -26,32 +26,24 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
-    // Extract location data if available
-    String? formattedAddress;
-    if (json['location'] != null) {
-      final location = json['location'];
-      final street = location['street'];
-      formattedAddress = '${street['number']} ${street['name']}, ${location['city']}, ${location['country']}';
-    }
-
-    // Extract picture URL from the picture object
-    String avatar = 'https://randomuser.me/api/portraits/lego/1.jpg';
-    if (json['picture'] != null && json['picture']['large'] != null) {
-      avatar = json['picture']['large'];
-    }
-
+    // ReqRes API structure is different
+    // The data comes in a structure like: {"data": {user fields}}
+    final userData = json['data'] ?? json;
+    
     return User(
-      id: json['login']?['uuid'] ?? '',
-      email: json['email'] ?? '',
-      firstName: json['name']?['first'] ?? '',
-      lastName: json['name']?['last'] ?? '',
-      avatar: avatar,
-      phone: json['phone'],
-      cell: json['cell'],
-      nationality: json['nat'],
-      gender: json['gender'],
-      address: formattedAddress,
-      age: json['dob']?['age'],
+      id: userData['id']?.toString() ?? '',
+      email: userData['email'] ?? '',
+      firstName: userData['first_name'] ?? '',
+      lastName: userData['last_name'] ?? '',
+      avatar: userData['avatar'] ?? 'https://via.placeholder.com/150',
+      // Extract these fields from the API response if they exist
+      phone: userData['phone'] ?? userData['phone_number'],
+      gender: userData['gender'],
+      // These fields aren't provided by ReqRes API but we'll keep them for compatibility
+      cell: userData['cell'],
+      nationality: userData['nationality'],
+      address: userData['address'],
+      age: userData['age'] != null ? int.tryParse(userData['age'].toString()) : null,
     );
   }
 
@@ -77,32 +69,29 @@ class User {
 class UserResponse {
   final List<User> users;
   final int page;
-  final String seed;
-  final int results;
-  final String version;
+  final int perPage;
+  final int total;
+  final int totalPages;
 
   UserResponse({
     required this.users,
     required this.page,
-    required this.seed,
-    required this.results,
-    required this.version,
+    required this.perPage,
+    required this.total,
+    required this.totalPages,
   });
 
   factory UserResponse.fromJson(Map<String, dynamic> json) {
-    // Extract the info object
-    final info = json['info'] ?? {};
-    
-    // Extract the results list
-    var userList = json['results'] as List? ?? [];
-    List<User> users = userList.map((user) => User.fromJson(user)).toList();
+    // ReqRes API structure
+    var userList = json['data'] as List? ?? [];
+    List<User> users = userList.map((user) => User.fromJson({'data': user})).toList();
 
     return UserResponse(
       users: users,
-      page: info['page'] ?? 1,
-      seed: info['seed'] ?? '',
-      results: info['results'] ?? 0,
-      version: info['version'] ?? '',
+      page: json['page'] ?? 1,
+      perPage: json['per_page'] ?? 0,
+      total: json['total'] ?? 0,
+      totalPages: json['total_pages'] ?? 0,
     );
   }
 }

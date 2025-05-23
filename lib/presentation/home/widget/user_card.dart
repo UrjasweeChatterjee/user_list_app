@@ -14,10 +14,15 @@ class UserCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       child: ListTile(
         leading: CircleAvatar(
+          radius: 25,
+          backgroundColor: Colors.grey.shade200,
           backgroundImage: NetworkImage(user.avatar),
           onBackgroundImageError: (exception, stackTrace) {
             debugPrint('Error loading avatar: $exception');
           },
+          child: user.avatar.isEmpty 
+              ? const Icon(Icons.person, size: 30, color: Colors.grey)
+              : null,
         ),
         title: Text(user.fullName),
         subtitle: Text(user.email),
