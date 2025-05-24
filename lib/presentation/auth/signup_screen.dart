@@ -24,22 +24,28 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _register() {
+  void _register() async {
     if (_formKey.currentState!.validate()) {
-      final authController = Provider.of<AuthController>(context, listen: false);
-      authController.register(
+      final authController = Provider.of<AuthController>(
+        context,
+        listen: false,
+      );
+      await authController.register(
         _emailController.text.trim(),
         _passwordController.text,
       );
+      
+      // Check if registration was successful and navigate to home
+      if (authController.isAuthenticated && mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sign Up'),
-      ),
+      appBar: AppBar(title: const Text('Sign Up')),
       body: Consumer<AuthController>(
         builder: (context, authController, _) {
           if (authController.isAuthenticated) {
@@ -80,6 +86,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       if (!value.contains('@')) {
                         return 'Please enter a valid email';
                       }
+                      // No specific email validation for production use
                       return null;
                     },
                   ),
@@ -122,15 +129,14 @@ class _SignupScreenState extends State<SignupScreen> {
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: authController.isLoading ? null : _register,
-                    child: authController.isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text('Sign Up'),
+                    child:
+                        authController.isLoading
+                            ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Text('Sign Up'),
                   ),
                   const SizedBox(height: 16),
                   TextButton(
@@ -139,10 +145,10 @@ class _SignupScreenState extends State<SignupScreen> {
                     },
                     child: const Text('Already have an account? Login'),
                   ),
-                  // For demo purposes - use these credentials
+                  // Just a hint for testing
                   const SizedBox(height: 24),
                   const Text(
-                    'Demo email: eve.holt@reqres.in',
+                    'Use authorized credentials to register',
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                     textAlign: TextAlign.center,
                   ),

@@ -11,29 +11,28 @@ class AuthCheck extends StatelessWidget {
     return Consumer<AuthController>(
       builder: (context, authController, _) {
         // Show loading indicator while checking authentication status
-        if (authController.isLoading) {
+        if (!authController.isInitialized || authController.isLoading) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        // Redirect based on authentication status
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (authController.isAuthenticated) {
+        // If user is already authenticated, go to home screen
+        if (authController.isAuthenticated) {
+          // Use a post-frame callback to avoid build errors
+          WidgetsBinding.instance.addPostFrameCallback((_) {
             Navigator.pushReplacementNamed(context, '/home');
-          } else {
+          });
+          // Show loading while navigating
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        } else {
+          // If not authenticated, go to login screen
+          WidgetsBinding.instance.addPostFrameCallback((_) {
             Navigator.pushReplacementNamed(context, '/login');
-          }
-        });
-
-        // Return a loading screen while the redirect happens
-        return const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
+          });
+          // Show loading while navigating
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
       },
     );
   }
