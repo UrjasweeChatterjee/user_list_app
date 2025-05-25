@@ -2,12 +2,136 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 import '../../controllers/user_controller.dart';
+import '../../models/user.dart';
 import 'widget/user_list.dart';
 
 class HomeBody extends StatelessWidget {
   final UserController controller;
 
   const HomeBody({super.key, required this.controller});
+
+  // Show dialog to edit user information
+  void _showEditUserDialog(BuildContext context, User user, UserController controller) {
+    final TextEditingController firstNameController = TextEditingController(text: user.firstName);
+    final TextEditingController lastNameController = TextEditingController(text: user.lastName);
+    final TextEditingController emailController = TextEditingController(text: user.email);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit User'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: firstNameController,
+                decoration: const InputDecoration(labelText: 'First Name'),
+              ),
+              TextField(
+                controller: lastNameController,
+                decoration: const InputDecoration(labelText: 'Last Name'),
+              ),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+                keyboardType: TextInputType.emailAddress,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              // Create updated user object
+              final updatedUser = User(
+                id: user.id,
+                firstName: firstNameController.text,
+                lastName: lastNameController.text,
+                email: emailController.text,
+                avatar: user.avatar,
+              );
+              
+              try {
+                // Call the update method
+                await controller.updateUser(user.id, updatedUser);
+                Navigator.pop(context);
+                
+                // Show success message
+                Fluttertoast.showToast(
+                  msg: 'User updated successfully',
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                );
+              } catch (e) {
+                // Show error message
+                Fluttertoast.showToast(
+                  msg: 'Failed to update user: $e',
+                  toastLength: Toast.LENGTH_LONG,
+                  gravity: ToastGravity.BOTTOM,
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show confirmation dialog before deleting a user
+  void _showDeleteConfirmationDialog(BuildContext context, User user, UserController controller) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete User'),
+        content: Text('Are you sure you want to delete ${user.fullName}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                // Call the delete method
+                final success = await controller.deleteUser(user.id);
+                Navigator.pop(context);
+                
+                // Show success message
+                if (success) {
+                  Fluttertoast.showToast(
+                    msg: 'User deleted successfully',
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                  );
+                } else {
+                  Fluttertoast.showToast(
+                    msg: 'Failed to delete user',
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                  );
+                }
+              } catch (e) {
+                // Show error message
+                Fluttertoast.showToast(
+                  msg: 'Failed to delete user: $e',
+                  toastLength: Toast.LENGTH_LONG,
+                  gravity: ToastGravity.BOTTOM,
+                );
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +170,12 @@ class HomeBody extends StatelessWidget {
                         '/user_details',
                         arguments: user.id,
                       );
+                    },
+                    onEditUser: (user) {
+                      _showEditUserDialog(context, user, controller);
+                    },
+                    onDeleteUser: (user) {
+                      _showDeleteConfirmationDialog(context, user, controller);
                     },
                   ),
                   if (controller.isLoading && controller.users.isNotEmpty)
