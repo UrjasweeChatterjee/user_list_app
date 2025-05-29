@@ -17,8 +17,21 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
 
-    Future.delayed(Duration.zero, () {
-      Provider.of<UserController>(context, listen: false).fetchUsers();
+    // Use a post-frame callback to ensure the widget is fully built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('HomeScreen: Fetching users after build');
+      final userController = Provider.of<UserController>(context, listen: false);
+      
+      // Force a refresh to ensure we get the latest data
+      userController.fetchUsers(refresh: true).then((_) {
+        debugPrint('HomeScreen: User fetch completed');
+      }).catchError((error) {
+        debugPrint('HomeScreen: Error fetching users: $error');
+        // Show a snackbar with the error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load users: $error')),
+        );
+      });
     });
   }
 

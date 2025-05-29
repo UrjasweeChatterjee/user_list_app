@@ -15,11 +15,16 @@ dependencies:
   fluttertoast: ^8.2.4
   provider: ^6.1.1
   shared_preferences: ^2.2.2
+  retrofit: ^4.0.3
+  json_annotation: ^4.8.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  retrofit_generator: ^7.0.8
+  build_runner: ^2.4.6
+  json_serializable: ^6.7.1
 
 flutter:
   uses-material-design: true

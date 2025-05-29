@@ -1,59 +1,111 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/user.dart';
 
 class UserData {
-  final Dio _dio = Dio(
-    BaseOptions(
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': 'reqres-free-v1', // Add the API key
-      },
-      validateStatus: (status) {
-        return status! < 500; // Accept all status codes less than 500
-      },
-    ),
-  );
-  final String _baseUrl = 'https://reqres.in/api';
+  late final Dio _dio;
+  
+  UserData() {
+    _dio = Dio(
+      BaseOptions(
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': 'reqres-free-v1', // API key
+        },
+        validateStatus: (status) {
+          return status! < 500; // Accept all status codes less than 500
+        },
+        baseUrl: 'https://reqres.in/api', // Set base URL for all requests
+      ),
+    );
+    
+    // Add an interceptor to ensure the API key is set for all requests
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          // Ensure API key is set for all requests
+          options.headers['X-API-Key'] = 'reqres-free-v1';
+          debugPrint('Making request to: ${options.uri}');
+          return handler.next(options);
+        },
+        onResponse: (response, handler) {
+          debugPrint('Received response with status: ${response.statusCode}');
+          return handler.next(response);
+        },
+        onError: (DioException e, handler) {
+          debugPrint('Error in request: ${e.message}');
+          return handler.next(e);
+        },
+      ),
+    );
+  }
 
   Future<UserResponse> fetchUsers(int page, {int results = 6}) async {
     try {
-      // Ensure the API key is set for this request
-      _dio.options.headers['X-API-Key'] = 'reqres-free-v1';
+      debugPrint('Fetching users: page=$page, results=$results');
       
-      final response = await _dio.get(
-        '$_baseUrl/users',
+      // Make a direct Dio call to debug the issue
+      final directResponse = await _dio.get(
+        '/users',
         queryParameters: {'page': page, 'per_page': results},
       );
-      return UserResponse.fromJson(response.data);
+      
+      debugPrint('Direct API response: ${directResponse.statusCode}');
+      debugPrint('Response data: ${directResponse.data}');
+      
+      if (directResponse.statusCode == 200) {
+        // Manually parse the response to ensure it works
+        final UserResponse userResponse = UserResponse.fromJson(directResponse.data);
+        debugPrint('Users fetched successfully: ${userResponse.users.length} users');
+        return userResponse;
+      } else {
+        throw Exception('Failed to load users: ${directResponse.statusCode}');
+      }
     } on DioException catch (e) {
+      debugPrint('DioException in fetchUsers: ${e.message}');
+      debugPrint('DioException response: ${e.response?.data}');
       throw Exception('Failed to load users: ${e.message}');
+    } catch (e) {
+      debugPrint('Unexpected error in fetchUsers: $e');
+      throw Exception('Failed to load users: $e');
     }
   }
 
   Future<User> fetchUserDetails(String userId) async {
     try {
-      // Ensure the API key is set for this request
-      _dio.options.headers['X-API-Key'] = 'reqres-free-v1';
+      debugPrint('Fetching user details for userId: $userId');
       
-      // ReqRes API has a specific endpoint for individual users
-      final response = await _dio.get('$_baseUrl/users/$userId');
-
-      if (response.data != null) {
-        return User.fromJson(response.data);
+      // Make a direct Dio call to debug the issue
+      final directResponse = await _dio.get(
+        '/users/$userId',
+      );
+      
+      debugPrint('Direct API response: ${directResponse.statusCode}');
+      debugPrint('Response data: ${directResponse.data}');
+      
+      if (directResponse.statusCode == 200) {
+        // Manually parse the response to ensure it works
+        final User user = User.fromJson(directResponse.data);
+        debugPrint('User details fetched successfully: ${user.fullName}');
+        return user;
       } else {
-        throw Exception('User not found');
+        throw Exception('Failed to load user details: ${directResponse.statusCode}');
       }
     } on DioException catch (e) {
+      debugPrint('DioException in fetchUserDetails: ${e.message}');
+      debugPrint('DioException response: ${e.response?.data}');
       throw Exception('Failed to load user details: ${e.message}');
+    } catch (e) {
+      debugPrint('Unexpected error in fetchUserDetails: $e');
+      throw Exception('Failed to load user details: $e');
     }
   }
 
   // Update a user with PUT request
   Future<User> updateUser(String userId, User updatedUser) async {
     try {
-      // Ensure the API key is set for this request
-      _dio.options.headers['X-API-Key'] = 'reqres-free-v1';
+      debugPrint('Updating user with ID: $userId');
       
       // Prepare the data to be sent in the format expected by the API
       final Map<String, dynamic> userData = {
@@ -63,17 +115,20 @@ class UserData {
         // Add any other fields you want to update
       };
       
-      // Make the PUT request to the exact endpoint
-      final response = await _dio.put(
-        '$_baseUrl/users/$userId',
+      // Make a direct Dio call to update the user
+      final directResponse = await _dio.put(
+        '/users/$userId',
         data: userData,
       );
       
-      // For reqres.in API, a successful update returns status code 200
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        // If the API doesn't return the updated user data, we'll use our local data
-        if (response.data != null && response.data.containsKey('updatedAt')) {
-          // The API returned some data, merge it with our local data
+      debugPrint('Update user response: ${directResponse.statusCode}');
+      debugPrint('Response data: ${directResponse.data}');
+      
+      if (directResponse.statusCode == 200 || directResponse.statusCode == 201) {
+        // ReqRes API might not return the full updated user data
+        // If the API returns data, use it; otherwise, use our local data
+        if (directResponse.data != null && directResponse.data.containsKey('updatedAt')) {
+          // Create a user with the data we have
           return User(
             id: userId,
             firstName: updatedUser.firstName,
@@ -86,40 +141,54 @@ class UserData {
           return updatedUser;
         }
       } else {
-        throw Exception('Failed to update user: ${response.statusCode}');
+        throw Exception('Failed to update user: ${directResponse.statusCode}');
       }
     } on DioException catch (e) {
+      debugPrint('DioException in updateUser: ${e.message}');
+      debugPrint('DioException response: ${e.response?.data}');
       throw Exception('Failed to update user: ${e.message}');
+    } catch (e) {
+      debugPrint('Unexpected error in updateUser: $e');
+      throw Exception('Failed to update user: $e');
     }
   }
   
   // Delete a user with DELETE request
   Future<bool> deleteUser(String userId) async {
     try {
-      // Ensure the API key is set for this request
-      _dio.options.headers['X-API-Key'] = 'reqres-free-v1';
+      debugPrint('Deleting user with ID: $userId');
       
-      // Make the DELETE request to the exact endpoint
-      final response = await _dio.delete('$_baseUrl/users/$userId');
+      // Make a direct Dio call to delete the user
+      final directResponse = await _dio.delete(
+        '/users/$userId',
+      );
+      
+      debugPrint('Delete user response: ${directResponse.statusCode}');
       
       // ReqRes API typically returns 204 No Content for successful deletion
       // For mock APIs like reqres.in, we'll accept 200 and 204 as success
-      if (response.statusCode == 204 || response.statusCode == 200) {
+      if (directResponse.statusCode == 204 || directResponse.statusCode == 200) {
         return true;
-      } else if (response.statusCode == 404) {
+      } else if (directResponse.statusCode == 404) {
         // If the user doesn't exist on the server, we'll still consider it a success
         // since the end result is that the user is not there
         return true;
       } else {
-        throw Exception('Failed to delete user: ${response.statusCode}');
+        throw Exception('Failed to delete user: ${directResponse.statusCode}');
       }
     } on DioException catch (e) {
+      debugPrint('DioException in deleteUser: ${e.message}');
+      debugPrint('DioException response: ${e.response?.statusCode}');
+      
       // For reqres.in API, we'll treat certain errors as success
       // since it's a mock API and doesn't actually delete anything
       if (e.response?.statusCode == 204 || e.response?.statusCode == 200) {
         return true;
       }
       throw Exception('Failed to delete user: ${e.message}');
+    } catch (e) {
+      debugPrint('Unexpected error in deleteUser: $e');
+      throw Exception('Failed to delete user: $e');
     }
   }
 }

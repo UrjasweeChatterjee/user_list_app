@@ -135,6 +135,7 @@ class HomeBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Show error toast if there's an error
     if (controller.error != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Fluttertoast.showToast(
@@ -149,7 +150,34 @@ class HomeBody extends StatelessWidget {
       onRefresh: () => controller.fetchUsers(refresh: true),
       child: controller.isLoading && controller.users.isEmpty
           ? const Center(child: CircularProgressIndicator())
-          : NotificationListener<ScrollNotification>(
+          : controller.users.isEmpty && controller.error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                      const SizedBox(height: 16),
+                      Text('Error: ${controller.error}', textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => controller.fetchUsers(refresh: true),
+                        child: const Text('Try Again'),
+                      ),
+                    ],
+                  ),
+                )
+              : controller.users.isEmpty
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.people_outline, size: 48, color: Colors.grey),
+                          SizedBox(height: 16),
+                          Text('No users found'),
+                        ],
+                      ),
+                    )
+                  : NotificationListener<ScrollNotification>(
               onNotification: (ScrollNotification scrollInfo) {
                 if (scrollInfo is ScrollEndNotification &&
                     scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent * 0.8 &&

@@ -1,8 +1,18 @@
+import 'package:json_annotation/json_annotation.dart';
+
+part 'user.g.dart';
+
+@JsonSerializable()
 class User {
   final String id;
   final String email;
+  
+  @JsonKey(name: 'first_name')
   final String firstName;
+  
+  @JsonKey(name: 'last_name')
   final String lastName;
+  
   final String avatar;
   final String? phone;
   final String? cell;
@@ -25,52 +35,38 @@ class User {
     this.age,
   });
 
-  factory User.fromJson(Map<String, dynamic> json) {
-    // ReqRes API structure is different
-    // The data comes in a structure like: {"data": {user fields}}
-    final userData = json['data'] ?? json;
-    
-    return User(
-      id: userData['id']?.toString() ?? '',
-      email: userData['email'] ?? '',
-      firstName: userData['first_name'] ?? '',
-      lastName: userData['last_name'] ?? '',
-      avatar: userData['avatar'] ?? 'https://via.placeholder.com/150',
-      // Extract these fields from the API response if they exist
-      phone: userData['phone'] ?? userData['phone_number'],
-      gender: userData['gender'],
-      // These fields aren't provided by ReqRes API but we'll keep them for compatibility
-      cell: userData['cell'],
-      nationality: userData['nationality'],
-      address: userData['address'],
-      age: userData['age'] != null ? int.tryParse(userData['age'].toString()) : null,
-    );
-  }
-
   String get fullName => '$firstName $lastName';
   
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'email': email,
-      'firstName': firstName,
-      'lastName': lastName,
-      'avatar': avatar,
-      'phone': phone,
-      'cell': cell,
-      'nationality': nationality,
-      'gender': gender,
-      'address': address,
-      'age': age,
-    };
+  // Generated fromJson method
+  factory User.fromJson(Map<String, dynamic> json) {
+    // Handle ReqRes API structure where data might be nested
+    final userData = json.containsKey('data') ? json['data'] : json;
+    
+    // Handle case where id might be an int in the API response
+    if (userData['id'] != null && userData['id'] is int) {
+      userData['id'] = userData['id'].toString();
+    }
+    
+    return _$UserFromJson(userData);
   }
+  
+  // Generated toJson method
+  Map<String, dynamic> toJson() => _$UserToJson(this);
 }
 
+@JsonSerializable()
 class UserResponse {
+  @JsonKey(name: 'data')
   final List<User> users;
+  
   final int page;
+  
+  @JsonKey(name: 'per_page')
   final int perPage;
+  
   final int total;
+  
+  @JsonKey(name: 'total_pages')
   final int totalPages;
 
   UserResponse({
@@ -81,17 +77,22 @@ class UserResponse {
     required this.totalPages,
   });
 
+  // Generated fromJson method
   factory UserResponse.fromJson(Map<String, dynamic> json) {
-    // ReqRes API structure
-    var userList = json['data'] as List? ?? [];
-    List<User> users = userList.map((user) => User.fromJson({'data': user})).toList();
-
-    return UserResponse(
-      users: users,
-      page: json['page'] ?? 1,
-      perPage: json['per_page'] ?? 0,
-      total: json['total'] ?? 0,
-      totalPages: json['total_pages'] ?? 0,
-    );
+    // Ensure the json object has the expected structure
+    if (!json.containsKey('data') || !json.containsKey('page')) {
+      // If the response doesn't match expected format, create a default response
+      return UserResponse(
+        users: [],
+        page: 1,
+        perPage: 0,
+        total: 0,
+        totalPages: 0,
+      );
+    }
+    return _$UserResponseFromJson(json);
   }
+  
+  // Generated toJson method
+  Map<String, dynamic> toJson() => _$UserResponseToJson(this);
 }
